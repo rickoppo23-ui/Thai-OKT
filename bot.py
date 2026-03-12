@@ -59,7 +59,7 @@ def save_seen(data):
         json.dump(data, f)
 
 
-seen = load_seen()
+seen = []
 
 posts = get_posts()
 
