@@ -1,43 +1,25 @@
 import requests
-import sqlite3
-import time
 from bs4 import BeautifulSoup
+import json
 import os
 
-FORUM_URL = "https://samsguide.work/forumdisplay.php?f=19"
+URL = "https://samsguide.work/forumdisplay.php?f=19"
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 
-CHECK_INTERVAL = 60
-
-conn = sqlite3.connect("posts.db")
-cursor = conn.cursor()
-
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS posts(
-    url TEXT PRIMARY KEY
-)
-""")
-
-conn.commit()
+DATA_FILE = "posts.json"
 
 
 def send_message(title, url):
 
-    message = f"""
-🚨 New Forum Post
-
-{title}
-
-{url}
-"""
+    msg = f"🚨 New forum post\n\n{title}\n{url}"
 
     requests.post(
         f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
         data={
             "chat_id": CHAT_ID,
-            "text": message
+            "text": msg
         }
     )
 
@@ -46,7 +28,7 @@ def get_posts():
 
     headers = {"User-Agent": "Mozilla/5.0"}
 
-    r = requests.get(FORUM_URL, headers=headers)
+    r = requests.get(URL, headers=headers)
 
     soup = BeautifulSoup(r.text, "html.parser")
 
@@ -55,7 +37,6 @@ def get_posts():
     for link in soup.select("a[id^='thread_title']"):
 
         title = link.text.strip()
-
         url = "https://samsguide.work/" + link["href"]
 
         posts.append((title, url))
@@ -63,35 +44,31 @@ def get_posts():
     return posts
 
 
-def check_posts():
-
-    posts = get_posts()
-
-    for title, url in posts:
-
-        cursor.execute("SELECT url FROM posts WHERE url=?", (url,))
-        exists = cursor.fetchone()
-
-        if not exists:
-
-            send_message(title, url)
-
-            cursor.execute(
-                "INSERT INTO posts(url) VALUES(?)",
-                (url,)
-            )
-
-            conn.commit()
-
-
-while True:
+def load_seen():
 
     try:
+        with open(DATA_FILE) as f:
+            return json.load(f)
+    except:
+        return []
 
-        check_posts()
 
-    except Exception as e:
+def save_seen(data):
 
-        print("Error:", e)
+    with open(DATA_FILE, "w") as f:
+        json.dump(data, f)
 
-    time.sleep(CHECK_INTERVAL)
+
+seen = load_seen()
+
+posts = get_posts()
+
+for title, url in posts:
+
+    if url not in seen:
+
+        send_message(title, url)
+
+        seen.append(url)
+
+save_seen(seen)
