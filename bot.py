@@ -1,4 +1,4 @@
-import requests
+import cloudscraper
 from bs4 import BeautifulSoup
 import json
 import os
@@ -7,68 +7,40 @@ URL = "https://samsguide.work/forumdisplay.php?f=19"
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
-
 DATA_FILE = "posts.json"
 
-
-def send_message(title, url):
-
-    msg = f"🚨 New forum post\n\n{title}\n{url}"
-
-    requests.post(
-        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-        data={
-            "chat_id": CHAT_ID,
-            "text": msg
+def get_posts():
+    # This creates a scraper that can bypass common bot protections
+    scraper = cloudscraper.create_scraper(
+        browser={
+            'browser': 'chrome',
+            'platform': 'windows',
+            'desktop': True
         }
     )
 
-
-def get_posts():
-    # This header set mimics a real Chrome browser on Windows
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Referer": "https://www.google.com/",
-        "DNT": "1",
-        "Connection": "keep-alive",
-        "Upgrade-Insecure-Requests": "1"
-    }
-
     try:
-        r = requests.get(URL, headers=headers, timeout=15)
+        # We add a delay to look more human
+        response = scraper.get(URL, timeout=20)
         
-        # This will print the error in your GitHub Logs if it's blocked
-        if r.status_code != 200:
-            print(f"Failed to access forum. Status Code: {r.status_code}")
+        if response.status_code == 403:
+            print("Access denied (403). The website is blocking the bot.")
             return []
 
-        soup = BeautifulSoup(r.text, "html.parser")
+        soup = BeautifulSoup(response.text, "html.parser")
         posts = []
 
-        # Find the thread links
-        links = soup.select("a[id^='thread_title']")
-        print(f"Found {len(links)} posts on the page.") # Logging check
-
-        for link in links:
+        # Find the thread titles
+        for link in soup.select("a[id^='thread_title']"):
             title = link.text.strip()
             url = "https://samsguide.work/" + link["href"]
             posts.append((title, url))
 
+        print(f"Success! Found {len(posts)} posts.")
         return posts
+
     except Exception as e:
-        print(f"Error during scraping: {e}")
-        return []
-
-
-def load_seen():
-
-    try:
-        with open(DATA_FILE) as f:
-            return json.load(f)
-    except:
+        print(f"An error occurred: {e}")
         return []
 
 
