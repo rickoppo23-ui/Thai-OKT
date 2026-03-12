@@ -25,23 +25,42 @@ def send_message(title, url):
 
 
 def get_posts():
+    # This header set mimics a real Chrome browser on Windows
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Referer": "https://www.google.com/",
+        "DNT": "1",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1"
+    }
 
-    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        r = requests.get(URL, headers=headers, timeout=15)
+        
+        # This will print the error in your GitHub Logs if it's blocked
+        if r.status_code != 200:
+            print(f"Failed to access forum. Status Code: {r.status_code}")
+            return []
 
-    r = requests.get(URL, headers=headers)
+        soup = BeautifulSoup(r.text, "html.parser")
+        posts = []
 
-    soup = BeautifulSoup(r.text, "html.parser")
+        # Find the thread links
+        links = soup.select("a[id^='thread_title']")
+        print(f"Found {len(links)} posts on the page.") # Logging check
 
-    posts = []
+        for link in links:
+            title = link.text.strip()
+            url = "https://samsguide.work/" + link["href"]
+            posts.append((title, url))
 
-    for link in soup.select("a[id^='thread_title']"):
-
-        title = link.text.strip()
-        url = "https://samsguide.work/" + link["href"]
-
-        posts.append((title, url))
-
-    return posts
+        return posts
+    except Exception as e:
+        print(f"Error during scraping: {e}")
+        return []
 
 
 def load_seen():
