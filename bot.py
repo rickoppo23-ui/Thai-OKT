@@ -72,3 +72,4 @@ for title, url in posts:
         seen.append(url)
 
 save_seen(seen)
+send_message("Test System", "If you see this, the bot is connected!")
