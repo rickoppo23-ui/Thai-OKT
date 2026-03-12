@@ -3,6 +3,7 @@ name: Forum Monitor
 on:
   schedule:
     - cron: "* * * * *"
+  workflow_dispatch:
 
 jobs:
   run-bot:
