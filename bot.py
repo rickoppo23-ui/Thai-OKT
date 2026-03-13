@@ -4,7 +4,7 @@ import json
 import os
 import time
 
-URL = "https://samsguide.work/forumdisplay.php?f=19"
+URL = "https://www.sbf.net.nz/forumdisplay.php?f=19"
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 DATA_FILE = "posts.json"
