@@ -16,8 +16,10 @@ def get_scrapeops_url(url):
     payload = {
         'api_key': SCRAPEOPS_API_KEY,
         'url': url,
-        'bypass': 'cloudflare_level_2',  # Upgraded to Level 2
-        'render_js': 'true'             # Add JS rendering if Level 2 alone fails
+        'bypass': 'cloudflare_level_2',
+        'render_js': 'true',            # Executes JavaScript challenges
+        'residential': 'true',          # Uses high-quality home IPs
+        'country': 'us'                 # Sometimes locking to one country helps
     }
     proxy_url = 'https://proxy.scrapeops.io/v1/?' + urlencode(payload)
     return proxy_url
