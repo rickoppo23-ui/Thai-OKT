@@ -2,14 +2,14 @@ name: Forum Monitor
 
 on:
   schedule:
-    - cron: "7,27,47 * * * *"
-  workflow_dispatch:
+    - cron: "*/20 * * * *"  # Runs every 20 minutes
+  workflow_dispatch:      # Allows you to click "Run workflow" manually
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # This allows the bot to save the json file
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -23,11 +23,12 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run bot
-        run: python bot.py
+        run: python -u bot.py
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
-
+          SCRAPEOPS_API_KEY: ${{ secrets.SCRAPEOPS_API_KEY }}
+          
       - name: Commit and push changes
         run: |
           git config --global user.name "github-actions[bot]"
