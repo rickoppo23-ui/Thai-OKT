@@ -29,29 +29,35 @@ def send_message(title, url):
     )
 
 def get_posts():
-    try:
-        # We send the request through the ScrapeOps Proxy
-        response = requests.get(get_scrapeops_url(TARGET_URL), timeout=30)
+    # We will try up to 3 times before giving up
+    for attempt in range(3):
+        try:
+            print(f"Attempt {attempt + 1}: Fetching forum posts...")
+            response = requests.get(get_scrapeops_url(TARGET_URL), timeout=60)
+            
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, "html.parser")
+                posts = []
+                for link in soup.select("a[id^='thread_title']"):
+                    title = link.text.strip()
+                    url = "https://samsguide.work/" + link["href"]
+                    posts.append((title, url))
+                
+                print(f"Successfully found {len(posts)} posts.")
+                return posts
+            else:
+                print(f"Proxy returned status: {response.status_code}. Retrying...")
+                
+        except requests.exceptions.ReadTimeout:
+            print("The request timed out. Retrying...")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
         
-        if response.status_code != 200:
-            print(f"Proxy failed. Status: {response.status_code}")
-            return []
+        # Wait 5 seconds before trying again
+        time.sleep(5)
 
-        soup = BeautifulSoup(response.text, "html.parser")
-        posts = []
-
-        # Find the thread links
-        links = soup.select("a[id^='thread_title']")
-        for link in links:
-            title = link.text.strip()
-            url = "https://samsguide.work/" + link["href"]
-            posts.append((title, url))
-
-        print(f"Successfully found {len(posts)} posts via Proxy.")
-        return posts
-    except Exception as e:
-        print(f"Scraping error: {e}")
-        return []
+    print("All 3 attempts failed.")
+    return []
 
 # --- MAIN EXECUTION ---
 def load_seen():
