@@ -6,61 +6,47 @@ import os
 import time
 
 # --- CONFIGURATION ---
+# We force sorting by 'dateline' (Creation Date) and 'desc' (Newest first)
 TARGET_URL = "https://samsguide.work/forumdisplay.php?f=19&sort=dateline&order=desc&daysprune=-1"
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 SCRAPEOPS_API_KEY = os.environ["SCRAPEOPS_API_KEY"]
 DATA_FILE = "posts.json"
 
+def send_telegram(text):
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    requests.post(url, data={"chat_id": CHAT_ID, "text": text, "parse_mode": "Markdown"})
+
 def get_scrapeops_url(url):
     payload = {
         'api_key': SCRAPEOPS_API_KEY,
         'url': url,
         'bypass': 'cloudflare_level_2',
-        'render_js': 'true' 
+        'render_js': 'true'
     }
-    proxy_url = 'https://proxy.scrapeops.io/v1/?' + urlencode(payload)
-    return proxy_url
-
-def send_message(title, url):
-    msg = f"🚨 New forum post\n\n{title}\n{url}"
-    requests.post(
-        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-        data={"chat_id": CHAT_ID, "text": msg}
-    )
+    return 'https://proxy.scrapeops.io/v1/?' + urlencode(payload)
 
 def get_posts():
-    # We will try up to 3 times before giving up
-    for attempt in range(3):
-        try:
-            print(f"Attempt {attempt + 1}: Fetching forum posts...")
-            response = requests.get(get_scrapeops_url(TARGET_URL), timeout=60)
-            
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, "html.parser")
-                posts = []
-                for link in soup.select("a[id^='thread_title']"):
-                    title = link.text.strip()
-                    url = "https://samsguide.work/" + link["href"]
-                    posts.append((title, url))
-                
-                print(f"Successfully found {len(posts)} posts.")
-                return posts
-            else:
-                print(f"Proxy returned status: {response.status_code}. Retrying...")
-                
-        except requests.exceptions.ReadTimeout:
-            print("The request timed out. Retrying...")
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
+    try:
+        # Increased timeout to handle the Level 2 JS rendering
+        response = requests.get(get_scrapeops_url(TARGET_URL), timeout=60)
+        if response.status_code != 200:
+            print(f"Proxy failed: {response.status_code}")
+            return None # Return None to indicate a connection error
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        posts = []
+        # Find thread links - targeting the specific vBulletin ID pattern
+        for link in soup.select("a[id^='thread_title']"):
+            title = link.text.strip()
+            url = "https://samsguide.work/" + link["href"]
+            posts.append((title, url))
         
-        # Wait 5 seconds before trying again
-        time.sleep(5)
+        return posts
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
 
-    print("All 3 attempts failed.")
-    return []
-
-# --- MAIN EXECUTION ---
 def load_seen():
     try:
         with open(DATA_FILE) as f: return json.load(f)
@@ -69,14 +55,22 @@ def load_seen():
 def save_seen(data):
     with open(DATA_FILE, "w") as f: json.dump(data, f)
 
+# --- EXECUTION ---
 seen = load_seen()
-# seen = [] # UNCOMMENT THIS TO TEST: Sends all current posts once
+current_posts = get_posts()
 
-posts = get_posts()
-for title, url in posts:
-    if url not in seen:
-        send_message(title, url)
-        seen.append(url)
-        time.sleep(1)
+if current_posts is None:
+    send_telegram("⚠️ *Bot Alert*: Failed to connect to the forum. Check logs.")
+else:
+    new_found = False
+    for title, url in current_posts:
+        if url not in seen:
+            send_telegram(f"✨ *New Post Found!*\n\n{title}\n[Link to Post]({url})")
+            seen.append(url)
+            new_found = True
+            time.sleep(1) # Prevent Telegram spam block
 
-save_seen(seen)
+    if not new_found:
+        send_telegram("✅ *System Check*: No new posts found this hour.")
+
+    save_seen(seen)
