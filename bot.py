@@ -6,7 +6,7 @@ import os
 import time
 
 # --- CONFIGURATION ---
-TARGET_URL = "https://samsguide.work/forumdisplay.php?f=19"
+TARGET_URL = "https://samsguide.work/forumdisplay.php?f=19&sort=dateline&order=desc&daysprune=-1"
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 SCRAPEOPS_API_KEY = os.environ["SCRAPEOPS_API_KEY"]
