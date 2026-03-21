@@ -24,7 +24,6 @@ jobs:
 
       - name: Run bot
         run: python -u bot.py
-             python -u escort_bot.py
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
