@@ -2,7 +2,7 @@ name: Forum Monitor
 
 on:
   schedule:
-    - cron: "5 */6 * * *"  # Runs every 20 minutes
+    - cron: "0 12 * * *" 
   workflow_dispatch:      # Allows you to click "Run workflow" manually
 
 jobs:
