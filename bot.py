@@ -65,7 +65,7 @@ else:
     new_found = False
     for title, url in current_posts:
         if url not in seen:
-            send_telegram(f"✨ *New Post Found!*\n\n{title}\n[Link to Post]({url})")
+            send_telegram(f"✨ *New Thai OKT POst Found!*\n\n{title}\n[Link to Post]({url})")
             seen.append(url)
             new_found = True
             time.sleep(1) # Prevent Telegram spam block
