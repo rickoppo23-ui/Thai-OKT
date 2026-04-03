@@ -54,7 +54,7 @@ def parse_posts(html):
     posts = []
     for link in soup.select("a[id^='thread_title']"):
         title = link.text.strip()
-        url = "https://samsguide.work/" + link["href"]
+        url = "https://www.sbf.net.nz/" + link["href"]
         posts.append((title, url))
     return posts
 
