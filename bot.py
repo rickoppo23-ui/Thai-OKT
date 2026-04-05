@@ -5,6 +5,12 @@ import json
 import os
 import time
 
+import base64
+
+GITHUB_TOKEN = os.environ["MY_GITHUB_TOKEN"]
+REPO = "rickoppo23-ui/Thai-OKT"   # 🔥 change this
+FILE_PATH = "posts.json"
+
 # --- CONFIGURATION ---
 # We force sorting by 'dateline' (Creation Date) and 'desc' (Newest first)
 TARGET_URL = "https://www.sbf.net.nz/forumdisplay.php?f=19&sort=dateline&order=desc&daysprune=-1"
@@ -59,12 +65,34 @@ def parse_posts(html):
     return posts
 
 def load_seen():
-    try:
-        with open(DATA_FILE) as f: return json.load(f)
-    except: return []
+    url = f"https://api.github.com/repos/{REPO}/contents/{FILE_PATH}"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+
+    r = requests.get(url, headers=headers)
+
+    if r.status_code == 200:
+        content = r.json()["content"]
+        decoded = base64.b64decode(content).decode()
+        return json.loads(decoded)
+
+    return []
 
 def save_seen(data):
-    with open(DATA_FILE, "w") as f: json.dump(data, f)
+    url = f"https://api.github.com/repos/{REPO}/contents/{FILE_PATH}"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+
+    content = base64.b64encode(json.dumps(data).encode()).decode()
+
+    r = requests.get(url, headers=headers)
+    sha = r.json()["sha"] if r.status_code == 200 else None
+
+    payload = {
+        "message": "update posts.json",
+        "content": content,
+        "sha": sha
+    }
+
+    requests.put(url, headers=headers, json=payload)
 
 # --- EXECUTION ---
 seen = load_seen()
